@@ -226,10 +226,19 @@ trend = (
     .reset_index(name="Count")
 )
 
-fig = px.bar(trend, y="Inserted_Date", x="Count", color="Operator_Code", orientation="h")
-fig.update_traces(textposition="outside", textfont=dict(size=9))
-fig = style_chart(fig)
+fig = px.bar(
+    trend,
+    y="Inserted_Date",
+    x="Count",
+    color="Operator_Code",
+    orientation="h",
+    text="Operator_Code"   # ✅ IMPORTANT LINE
+)
 
+fig.update_traces(
+    textposition="outside",
+    textfont=dict(size=10)
+)
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
