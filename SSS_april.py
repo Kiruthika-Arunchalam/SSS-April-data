@@ -124,7 +124,7 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# DATE SLIDER (FINAL FIX)
+# DATE PICKER (SMART FIX)
 # ---------------------------
 valid_dates = df["Inserted_Date"].dropna()
 
@@ -132,14 +132,33 @@ if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
-    date_range = st.slider(
-        "📅 Select Date Range",
-        min_value=min_date,
-        max_value=max_date,
-        value=(min_date, max_date)
-    )
+    # ✅ If only ONE date → single picker
+    if min_date == max_date:
+        selected_date = st.date_input(
+            "📅 Select Date",
+            value=min_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+        start_date = end_date = selected_date
+
+    # ✅ If MULTIPLE dates → range picker
+    else:
+        date_range = st.date_input(
+            "📅 Select Date Range",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date
+        )
+
+        # Handle user selection safely
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = date_range
+        else:
+            start_date = end_date = date_range
+
 else:
-    date_range = None
+    start_date = end_date = None
 
 # ---------------------------
 # DEFAULT FILTERS
@@ -159,17 +178,15 @@ filtered_df = df[
     (df["To_Port"].isin(to_port))
 ]
 
-# ---------------------------
-# DATE FILTER (FIXED)
-# ---------------------------
-if date_range:
-    start_date, end_date = date_range
 
+# ---------------------------
+# DATE FILTER (UPDATED)
+# ---------------------------
+if start_date and end_date:
     filtered_df = filtered_df[
         (filtered_df["Inserted_Date"] >= start_date) &
         (filtered_df["Inserted_Date"] <= end_date)
     ]
-
 # ---------------------------
 # KPI CARDS
 # ---------------------------
