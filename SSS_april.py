@@ -102,7 +102,7 @@ df["From_Port"] = df["From_Port"].astype(str).str.strip().str.upper()
 df["To_Port"] = df["To_Port"].astype(str).str.strip().str.upper()
 
 df["Inserted_At"] = pd.to_datetime(df["Inserted_At"], errors="coerce", dayfirst=True)
-df["Inserted_Date"] = df["Inserted_At"].dt.normalize()
+df["Inserted_Date"] = df["Inserted_At"].dt.date
 
 # ---------------------------
 # FILTER UI
@@ -127,8 +127,8 @@ to_port = col4.multiselect("To Port", to_port_list)
 valid_dates = df["Inserted_Date"].dropna()
 
 if not valid_dates.empty:
-    min_date = valid_dates.min().to_pydatetime()
-    max_date = valid_dates.max().to_pydatetime()
+    min_date = valid_dates.min()
+    max_date = valid_dates.max()
 
     date_range = st.slider(
         "📅 Select Date Range",
@@ -162,8 +162,8 @@ if date_range:
     start_date, end_date = date_range
 
     filtered_df = filtered_df[
-        (filtered_df["Inserted_Date"] >= pd.to_datetime(start_date)) &
-        (filtered_df["Inserted_Date"] <= pd.to_datetime(end_date))
+        (filtered_df["Inserted_Date"] >= start_date) &
+        (filtered_df["Inserted_Date"] <= end_date)
     ]
 
 # ---------------------------
