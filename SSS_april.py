@@ -102,6 +102,8 @@ df["From_Port"] = df["From_Port"].astype(str).str.strip().str.upper()
 df["To_Port"] = df["To_Port"].astype(str).str.strip().str.upper()
 
 df["Inserted_At"] = pd.to_datetime(df["Inserted_At"], errors="coerce", dayfirst=True)
+
+# ✅ IMPORTANT: use ONLY date type
 df["Inserted_Date"] = df["Inserted_At"].dt.date
 
 # ---------------------------
@@ -122,7 +124,7 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# DATE SLIDER (FIXED)
+# DATE SLIDER (FINAL FIX)
 # ---------------------------
 valid_dates = df["Inserted_Date"].dropna()
 
@@ -157,7 +159,9 @@ filtered_df = df[
     (df["To_Port"].isin(to_port))
 ]
 
-# DATE FILTER
+# ---------------------------
+# DATE FILTER (FIXED)
+# ---------------------------
 if date_range:
     start_date, end_date = date_range
 
@@ -176,15 +180,8 @@ c2.markdown(f'<div class="card card2">PORTS<br><h1>{filtered_df["From_Port"].nun
 c3.markdown(f'<div class="card card3">TERMINALS<br><h1>{filtered_df["From_Port_Terminal"].nunique()}</h1></div>', unsafe_allow_html=True)
 c4.markdown(f'<div class="card card4">VESSELS<br><h1>{filtered_df["Vessel_Name"].nunique()}</h1></div>', unsafe_allow_html=True)
 
-import pandas as pd
-
-# Ensure date format is correct
-df['Inserted_Date'] = pd.to_datetime(df['Inserted_Date']).dt.date
-
-
-
 # ---------------------------
-# SUMMARY TABLE (FORMAT FIX)
+# SUMMARY TABLE
 # ---------------------------
 st.markdown('<div class="section">Operator Extraction Summary</div>', unsafe_allow_html=True)
 
@@ -197,35 +194,23 @@ summary_df = (
     .sort_values(by=["Inserted_Date", "Operator_Code"])
 )
 
-# ✅ FORMAT DATE (IMPORTANT LINE)
-summary_df["Inserted_Date"] = summary_df["Inserted_Date"].dt.strftime("%d-%m-%Y")
+summary_df["Inserted_Date"] = pd.to_datetime(summary_df["Inserted_Date"]).dt.strftime("%d-%m-%Y")
 
-# Show in UI
 st.dataframe(summary_df, use_container_width=True)
+
 # ---------------------------
 # OPERATOR TREND
 # ---------------------------
 st.markdown('<div class="section">Date Wise Operator Trend</div>', unsafe_allow_html=True)
 
 trend = (
-    filtered_df.dropna(subset=["Inserted_Date"])
-    .groupby(["Inserted_Date", "Operator_Code"])
+    filtered_df.groupby(["Inserted_Date", "Operator_Code"])
     .size()
     .reset_index(name="Count")
 )
 
-fig = px.bar(
-    trend,
-    y="Inserted_Date",
-    x="Count",
-    color="Operator_Code",
-    orientation="h",
-    text="Operator_Code"
-)
-
-fig.update_traces(textposition="outside", textfont=dict(size=9))
+fig = px.bar(trend, y="Inserted_Date", x="Count", color="Operator_Code", orientation="h")
 fig = style_chart(fig)
-
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
@@ -238,7 +223,6 @@ compare.columns = ["Operator", "Count"]
 
 fig_compare = px.bar(compare, x="Operator", y="Count", color="Operator")
 fig_compare = style_chart(fig_compare)
-
 st.plotly_chart(fig_compare, use_container_width=True)
 
 # ---------------------------
@@ -255,9 +239,8 @@ route_df = (
 route_df["Route"] = route_df["From_Port"] + " → " + route_df["To_Port"]
 route_df = route_df.sort_values(by="Count", ascending=False).head(10)
 
-fig_route = px.bar(route_df, x="Count", y="Route", orientation="h", color="Route")
+fig_route = px.bar(route_df, x="Count", y="Route", orientation="h")
 fig_route = style_chart(fig_route)
-
 st.plotly_chart(fig_route, use_container_width=True)
 
 # ---------------------------
@@ -268,7 +251,6 @@ st.markdown('<div class="section">Service Distribution</div>', unsafe_allow_html
 service_df = filtered_df["Service"].value_counts().reset_index()
 service_df.columns = ["Service", "Count"]
 
-fig_service = px.bar(service_df.head(10), x="Count", y="Service", orientation="h", color="Count")
+fig_service = px.bar(service_df.head(10), x="Count", y="Service", orientation="h")
 fig_service = style_chart(fig_service)
-
 st.plotly_chart(fig_service, use_container_width=True)
