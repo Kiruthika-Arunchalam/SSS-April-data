@@ -122,11 +122,13 @@ operator = col1.multiselect("Operator", operator_list)
 service = col2.multiselect("Service", service_list)
 from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
+
 # ---------------------------
-# DATE RANGE FILTER (SAFE FIX)
+# DATE RANGE FILTER (FINAL FIX)
 # ---------------------------
 
-df["Inserted_Date"] = pd.to_datetime(df["Inserted_Date"]).dt.date
+df["Inserted_Date"] = pd.to_datetime(df["Inserted_At"], errors="coerce").dt.date
+
 valid_dates = df["Inserted_Date"].dropna()
 
 if not valid_dates.empty:
@@ -141,15 +143,15 @@ if not valid_dates.empty:
         key=f"date_range_{min_date}_{max_date}"
     )
 
-    # ✅ SAFE HANDLING (NO ERROR)
     if isinstance(date_range, tuple) and len(date_range) == 2:
-        start_date = date_range[0]
-        end_date = date_range[1]
+        start_date, end_date = date_range
     else:
-        start_date = date_range
-        end_date = date_range
+        start_date = end_date = date_range
 
-    # Apply filter
+    # ✅ FORCE SAME TYPE
+    start_date = pd.to_datetime(start_date).date()
+    end_date = pd.to_datetime(end_date).date()
+
     filtered_df = df[
         (df["Inserted_Date"] >= start_date) &
         (df["Inserted_Date"] <= end_date)
@@ -160,7 +162,6 @@ if not valid_dates.empty:
 else:
     filtered_df = df.copy()
     st.warning("⚠ No valid dates available")
-
 #KPi Card# ---------------------------
 c1, c2, c3, c4 = st.columns(4)
 
