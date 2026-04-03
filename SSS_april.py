@@ -124,7 +124,7 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# SIMPLE DATE RANGE FILTER
+# DATE RANGE FILTER (FINAL FIX)
 # ---------------------------
 
 # Ensure correct type
@@ -136,20 +136,21 @@ if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
-    # Single clean range picker
+    # ✅ Force new widget state using unique key
     date_range = st.date_input(
         "📅 Select From & To Date",
         value=(min_date, max_date),
         min_value=min_date,
         max_value=max_date,
-        key="date_range"
+        key=f"date_range_{min_date}_{max_date}"   # 🔥 dynamic key fix
     )
 
-    # Handle both single & range selection
-    if isinstance(date_range, tuple) and len(date_range) == 2:
+    # ✅ ALWAYS convert to tuple properly
+    if isinstance(date_range, tuple):
         start_date, end_date = date_range
     else:
-        start_date = end_date = date_range
+        start_date = date_range
+        end_date = date_range
 
     # Apply filter
     filtered_df = df[
@@ -157,13 +158,11 @@ if not valid_dates.empty:
         (df["Inserted_Date"] <= end_date)
     ]
 
-    # Show selected range
     st.write(f"📊 Showing data from **{start_date} to {end_date}**")
 
 else:
     filtered_df = df.copy()
-    st.warning("⚠ No valid dates available")
-# KPI CARDS
+    st.warning("⚠ No valid dates available")# KPI CARDS
 # ---------------------------
 c1, c2, c3, c4 = st.columns(4)
 
