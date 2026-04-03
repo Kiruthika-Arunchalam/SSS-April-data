@@ -122,32 +122,29 @@ operator = col1.multiselect("Operator", operator_list)
 service = col2.multiselect("Service", service_list)
 from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
-
 # ---------------------------
-# DATE RANGE FILTER (FINAL FIX)
+# DATE RANGE FILTER (SAFE FIX)
 # ---------------------------
 
-# Ensure correct type
 df["Inserted_Date"] = pd.to_datetime(df["Inserted_Date"]).dt.date
-
 valid_dates = df["Inserted_Date"].dropna()
 
 if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
-    # ✅ Force new widget state using unique key
     date_range = st.date_input(
         "📅 Select From & To Date",
         value=(min_date, max_date),
         min_value=min_date,
         max_value=max_date,
-        key=f"date_range_{min_date}_{max_date}"   # 🔥 dynamic key fix
+        key=f"date_range_{min_date}_{max_date}"
     )
 
-    # ✅ ALWAYS convert to tuple properly
-    if isinstance(date_range, tuple):
-        start_date, end_date = date_range
+    # ✅ SAFE HANDLING (NO ERROR)
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start_date = date_range[0]
+        end_date = date_range[1]
     else:
         start_date = date_range
         end_date = date_range
@@ -162,8 +159,9 @@ if not valid_dates.empty:
 
 else:
     filtered_df = df.copy()
-    st.warning("⚠ No valid dates available")# KPI CARDS
-# ---------------------------
+    st.warning("⚠ No valid dates available")
+
+#KPi Card# ---------------------------
 c1, c2, c3, c4 = st.columns(4)
 
 c1.markdown(f'<div class="card card1">OPERATORS<br><h1>{filtered_df["Operator_Code"].nunique()}</h1></div>', unsafe_allow_html=True)
