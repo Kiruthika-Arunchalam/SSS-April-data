@@ -124,8 +124,11 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# DATE RANGE FILTER (FINAL FIX)
+# DATE RANGE FILTER (FINAL FINAL FIX)
 # ---------------------------
+
+# ✅ Always keep datetime (NOT .dt.date)
+df["Inserted_Date"] = pd.to_datetime(df["Inserted_At"]).dt.normalize()
 
 valid_dates = df["Inserted_Date"].dropna()
 
@@ -133,15 +136,16 @@ if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
+    # ✅ ALWAYS RANGE PICKER (no condition)
     date_range = st.date_input(
         "📅 Select From & To Date",
         value=(min_date.date(), max_date.date()),
         min_value=min_date.date(),
         max_value=max_date.date(),
-        key="date_range_final"
+        key="date_range_fixed_final"   # 🔥 fixed key
     )
 
-    # Handle safely
+    # ✅ SAFE HANDLING
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start_date = pd.to_datetime(date_range[0])
         end_date = pd.to_datetime(date_range[1])
@@ -149,18 +153,17 @@ if not valid_dates.empty:
         start_date = pd.to_datetime(date_range)
         end_date = pd.to_datetime(date_range)
 
-    # Apply filter (IMPORTANT FIX)
+    # ✅ APPLY FILTER
     filtered_df = df[
         (df["Inserted_Date"] >= start_date) &
         (df["Inserted_Date"] <= end_date)
     ]
 
-    st.write(f"📊 Showing data from **{start_date.date()} to {end_date.date()}**")
+    st.success(f"Showing: {start_date.date()} → {end_date.date()}")
 
 else:
     filtered_df = df.copy()
-    st.warning("⚠ No valid dates available")# ---------------------------
-# KPI CARDS
+    st.warning("No valid dates found")# KPI CARDS
 # ---------------------------
 c1, c2, c3, c4 = st.columns(4)
 
