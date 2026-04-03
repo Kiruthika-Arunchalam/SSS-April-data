@@ -104,7 +104,7 @@ df["To_Port"] = df["To_Port"].astype(str).str.strip().str.upper()
 df["Inserted_At"] = pd.to_datetime(df["Inserted_At"], errors="coerce", dayfirst=True)
 
 # ✅ IMPORTANT: use ONLY date type
-df["Inserted_Date"] = df["Inserted_At"].dt.date
+df["Inserted_Date"] = pd.to_datetime(df["Inserted_At"]).dt.normalize()
 
 # ---------------------------
 # FILTER UI
