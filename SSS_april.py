@@ -179,15 +179,78 @@ filtered_df = df[
 ]
 
 
+   # ---------------------------
+# DATE FILTER (BEST UX)
 # ---------------------------
-# DATE FILTER (UPDATED)
-# ---------------------------
-if start_date and end_date:
-    filtered_df = filtered_df[
-        (filtered_df["Inserted_Date"] >= start_date) &
-        (filtered_df["Inserted_Date"] <= end_date)
+
+# Ensure correct type
+df["Inserted_Date"] = pd.to_datetime(df["Inserted_Date"]).dt.date
+
+valid_dates = df["Inserted_Date"].dropna()
+
+if not valid_dates.empty:
+    min_date = valid_dates.min()
+    max_date = valid_dates.max()
+
+    # ---------------------------
+    # QUICK FILTER OPTIONS
+    # ---------------------------
+    col1, col2 = st.columns([3, 1])
+
+    with col2:
+        quick_filter = st.selectbox(
+            "Quick Select",
+            ["Custom", "Today", "Last 7 Days", "Last 30 Days"]
+        )
+
+    # ---------------------------
+    # DEFAULT RANGE
+    # ---------------------------
+    if quick_filter == "Today":
+        start_date = end_date = max_date
+
+    elif quick_filter == "Last 7 Days":
+        start_date = max(min_date, max_date - pd.Timedelta(days=6))
+        end_date = max_date
+
+    elif quick_filter == "Last 30 Days":
+        start_date = max(min_date, max_date - pd.Timedelta(days=29))
+        end_date = max_date
+
+    else:
+        # ---------------------------
+        # DATE RANGE PICKER (MAIN FIX)
+        # ---------------------------
+        date_range = col1.date_input(
+            "📅 Select Date Range",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date,
+            key="date_range"
+        )
+
+        # Handle selection safely
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = date_range
+        else:
+            start_date = end_date = date_range
+
+    # ---------------------------
+    # APPLY FILTER
+    # ---------------------------
+    filtered_df = df[
+        (df["Inserted_Date"] >= start_date) &
+        (df["Inserted_Date"] <= end_date)
     ]
-# ---------------------------
+
+    # ---------------------------
+    # SHOW SELECTED RANGE (UX)
+    # ---------------------------
+    st.info(f"Showing data from **{start_date} → {end_date}**")
+
+else:
+    filtered_df = df.copy()
+    st.warning("⚠ No valid dates available")# ---------------------------
 # KPI CARDS
 # ---------------------------
 c1, c2, c3, c4 = st.columns(4)
