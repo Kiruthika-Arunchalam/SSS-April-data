@@ -124,70 +124,42 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# DATE PICKER (SMART FIX)
+# DATE RANGE FILTER (FINAL FIX)
 # ---------------------------
+
 valid_dates = df["Inserted_Date"].dropna()
 
 if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
-    # ✅ If only ONE date → single picker
-    if min_date == max_date:
-        selected_date = st.date_input(
-            "📅 Select Date",
-            value=min_date,
-            min_value=min_date,
-            max_value=max_date
-        )
-        start_date = end_date = selected_date
+    date_range = st.date_input(
+        "📅 Select From & To Date",
+        value=(min_date.date(), max_date.date()),
+        min_value=min_date.date(),
+        max_value=max_date.date(),
+        key="date_range_final"
+    )
 
-    # ✅ If MULTIPLE dates → range picker
+    # Handle safely
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start_date = pd.to_datetime(date_range[0])
+        end_date = pd.to_datetime(date_range[1])
     else:
-        date_range = st.date_input(
-            "📅 Select Date Range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
+        start_date = pd.to_datetime(date_range)
+        end_date = pd.to_datetime(date_range)
 
-        # Handle user selection safely
-        if isinstance(date_range, tuple) and len(date_range) == 2:
-            start_date, end_date = date_range
-        else:
-            start_date = end_date = date_range
+    # Apply filter (IMPORTANT FIX)
+    filtered_df = df[
+        (df["Inserted_Date"] >= start_date) &
+        (df["Inserted_Date"] <= end_date)
+    ]
+
+    st.write(f"📊 Showing data from **{start_date.date()} to {end_date.date()}**")
 
 else:
-    start_date = end_date = None
-
-# ---------------------------
-# DEFAULT FILTERS
-# ---------------------------
-if not operator: operator = operator_list
-if not service: service = service_list
-if not from_port: from_port = from_port_list
-if not to_port: to_port = to_port_list
-
-# ---------------------------
-# APPLY FILTERS
-# ---------------------------
-filtered_df = df[
-    (df["Operator_Code"].isin(operator)) &
-    (df["Service"].isin(service)) &
-    (df["From_Port"].isin(from_port)) &
-    (df["To_Port"].isin(to_port))
-]
-
-
-# ---------------------------
-# DATE FILTER (UPDATED)
-# ---------------------------
-if start_date and end_date:
-    filtered_df = filtered_df[
-        (filtered_df["Inserted_Date"] >= start_date) &
-        (filtered_df["Inserted_Date"] <= end_date)
-    ]
-# ---------------------------
+    filtered_df = df.copy()
+    st.warning("⚠ No valid dates available")# ---------------------------
 # KPI CARDS
 # ---------------------------
 c1, c2, c3, c4 = st.columns(4)
