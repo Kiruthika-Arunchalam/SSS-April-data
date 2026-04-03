@@ -80,7 +80,7 @@ st.markdown('<div class="title">SSS DATA ANALYTICS DASHBOARD</div>', unsafe_allo
 # ---------------------------
 # LOAD DATA
 # ---------------------------
-@st.cache_data
+
 def load_data():
     zip_file = [f for f in os.listdir() if f.endswith(".zip")][0]
 
@@ -124,45 +124,72 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# DATE RANGE FILTER (FINAL FIX)
+# DATE PICKER (SMART FIX)
 # ---------------------------
-
-df["Inserted_Date"] = pd.to_datetime(df["Inserted_At"], errors="coerce").dt.date
-
 valid_dates = df["Inserted_Date"].dropna()
 
 if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
-    date_range = st.date_input(
-        "📅 Select From & To Date",
-        value=(min_date, max_date),
-        min_value=min_date,
-        max_value=max_date,
-        key=f"date_range_{min_date}_{max_date}"
-    )
+    # ✅ If only ONE date → single picker
+    if min_date == max_date:
+        selected_date = st.date_input(
+            "📅 Select Date",
+            value=min_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+        start_date = end_date = selected_date
 
-    if isinstance(date_range, tuple) and len(date_range) == 2:
-        start_date, end_date = date_range
+    # ✅ If MULTIPLE dates → range picker
     else:
-        start_date = end_date = date_range
+        date_range = st.date_input(
+            "📅 Select Date Range",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date
+        )
 
-    # ✅ FORCE SAME TYPE
-    start_date = pd.to_datetime(start_date).date()
-    end_date = pd.to_datetime(end_date).date()
-
-    filtered_df = df[
-        (df["Inserted_Date"] >= start_date) &
-        (df["Inserted_Date"] <= end_date)
-    ]
-
-    st.write(f"📊 Showing data from **{start_date} to {end_date}**")
+        # Handle user selection safely
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = date_range
+        else:
+            start_date = end_date = date_range
 
 else:
-    filtered_df = df.copy()
-    st.warning("⚠ No valid dates available")
-#KPi Card# ---------------------------
+    start_date = end_date = None
+
+# ---------------------------
+# DEFAULT FILTERS
+# ---------------------------
+if not operator: operator = operator_list
+if not service: service = service_list
+if not from_port: from_port = from_port_list
+if not to_port: to_port = to_port_list
+
+# ---------------------------
+# APPLY FILTERS
+# ---------------------------
+filtered_df = df[
+    (df["Operator_Code"].isin(operator)) &
+    (df["Service"].isin(service)) &
+    (df["From_Port"].isin(from_port)) &
+    (df["To_Port"].isin(to_port))
+]
+
+
+# ---------------------------
+# DATE FILTER (UPDATED)
+# ---------------------------
+if start_date and end_date:
+    filtered_df = filtered_df[
+        (filtered_df["Inserted_Date"] >= start_date) &
+        (filtered_df["Inserted_Date"] <= end_date)
+    ]
+# ---------------------------
+# KPI CARDS
+# ---------------------------
 c1, c2, c3, c4 = st.columns(4)
 
 c1.markdown(f'<div class="card card1">OPERATORS<br><h1>{filtered_df["Operator_Code"].nunique()}</h1></div>', unsafe_allow_html=True)
@@ -171,11 +198,11 @@ c3.markdown(f'<div class="card card3">TERMINALS<br><h1>{filtered_df["From_Port_T
 c4.markdown(f'<div class="card card4">VESSELS<br><h1>{filtered_df["Vessel_Name"].nunique()}</h1></div>', unsafe_allow_html=True)
 
 # ---------------------------
-# SUMMARY TABLE WITH TOTAL
+# SUMMARY TABLE WITH FINAL TOTAL
 # ---------------------------
 st.markdown('<div class="section">Date vs Operator Summary</div>', unsafe_allow_html=True)
 
-# Create summary from FILTERED DATA
+# Summary per date & operator
 summary_df = (
     filtered_df
     .dropna(subset=["Inserted_Date", "Operator_Code"])
@@ -184,33 +211,33 @@ summary_df = (
     .reset_index(name="Operator_Count")
 )
 
-# Sort before formatting
+# Sort
 summary_df = summary_df.sort_values(by=["Inserted_Date", "Operator_Code"])
 
-# ✅ Add TOTAL row per date (BEFORE formatting date)
-total_df = (
-    summary_df
-    .groupby("Inserted_Date", as_index=False)["Operator_Count"]
-    .sum()
-)
+# ---------------------------
+# GRAND TOTAL (ONLY ONE ROW)
+# ---------------------------
+grand_total = pd.DataFrame({
+    "Inserted_Date": ["TOTAL"],
+    "Operator_Code": [""],
+    "Operator_Count": [summary_df["Operator_Count"].sum()]
+})
 
-total_df["Operator_Code"] = "TOTAL"
+# ---------------------------
+# FORMAT DATE
+# ---------------------------
+summary_df["Inserted_Date"] = pd.to_datetime(summary_df["Inserted_Date"]).dt.strftime("%d-%m-%Y")
 
-# Combine both
-final_df = pd.concat([summary_df, total_df], ignore_index=True)
+# Combine
+final_df = pd.concat([summary_df, grand_total], ignore_index=True)
 
-# ✅ Format date (ONLY for display)
-final_df["Inserted_Date"] = pd.to_datetime(final_df["Inserted_Date"]).dt.strftime("%d-%m-%Y")
-
-# ✅ Sort so TOTAL comes last
-final_df = final_df.sort_values(
-    by=["Inserted_Date", "Operator_Code"],
-    key=lambda col: col if col.name != "Operator_Code" else col.replace("TOTAL", "ZZZ")
-)
+# ---------------------------
+# RESET INDEX (FIX ISSUE)
+# ---------------------------
+final_df = final_df.reset_index(drop=True)
 
 # Display
-st.dataframe(final_df, use_container_width=True)
-# ---------------------------
+st.dataframe(final_df, use_container_width=True)# ---------------------------
 # OPERATOR TREND
 # ---------------------------
 st.markdown('<div class="section">Date Wise Operator Trend</div>', unsafe_allow_html=True)
