@@ -124,63 +124,7 @@ from_port = col3.multiselect("From Port", from_port_list)
 to_port = col4.multiselect("To Port", to_port_list)
 
 # ---------------------------
-# DATE PICKER (SMART FIX)
-# ---------------------------
-valid_dates = df["Inserted_Date"].dropna()
-
-if not valid_dates.empty:
-    min_date = valid_dates.min()
-    max_date = valid_dates.max()
-
-    # ✅ If only ONE date → single picker
-    if min_date == max_date:
-        selected_date = st.date_input(
-            "📅 Select Date",
-            value=min_date,
-            min_value=min_date,
-            max_value=max_date
-        )
-        start_date = end_date = selected_date
-
-    # ✅ If MULTIPLE dates → range picker
-    else:
-        date_range = st.date_input(
-            "📅 Select Date Range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
-
-        # Handle user selection safely
-        if isinstance(date_range, tuple) and len(date_range) == 2:
-            start_date, end_date = date_range
-        else:
-            start_date = end_date = date_range
-
-else:
-    start_date = end_date = None
-
-# ---------------------------
-# DEFAULT FILTERS
-# ---------------------------
-if not operator: operator = operator_list
-if not service: service = service_list
-if not from_port: from_port = from_port_list
-if not to_port: to_port = to_port_list
-
-# ---------------------------
-# APPLY FILTERS
-# ---------------------------
-filtered_df = df[
-    (df["Operator_Code"].isin(operator)) &
-    (df["Service"].isin(service)) &
-    (df["From_Port"].isin(from_port)) &
-    (df["To_Port"].isin(to_port))
-]
-
-
-   # ---------------------------
-# DATE FILTER (BEST UX)
+# SIMPLE DATE RANGE FILTER
 # ---------------------------
 
 # Ensure correct type
@@ -192,65 +136,33 @@ if not valid_dates.empty:
     min_date = valid_dates.min()
     max_date = valid_dates.max()
 
-    # ---------------------------
-    # QUICK FILTER OPTIONS
-    # ---------------------------
-    col1, col2 = st.columns([3, 1])
+    # Single clean range picker
+    date_range = st.date_input(
+        "📅 Select From & To Date",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date,
+        key="date_range"
+    )
 
-    with col2:
-        quick_filter = st.selectbox(
-            "Quick Select",
-            ["Custom", "Today", "Last 7 Days", "Last 30 Days"]
-        )
-
-    # ---------------------------
-    # DEFAULT RANGE
-    # ---------------------------
-    if quick_filter == "Today":
-        start_date = end_date = max_date
-
-    elif quick_filter == "Last 7 Days":
-        start_date = max(min_date, max_date - pd.Timedelta(days=6))
-        end_date = max_date
-
-    elif quick_filter == "Last 30 Days":
-        start_date = max(min_date, max_date - pd.Timedelta(days=29))
-        end_date = max_date
-
+    # Handle both single & range selection
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start_date, end_date = date_range
     else:
-        # ---------------------------
-        # DATE RANGE PICKER (MAIN FIX)
-        # ---------------------------
-        date_range = col1.date_input(
-            "📅 Select Date Range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date,
-            key="date_range"
-        )
+        start_date = end_date = date_range
 
-        # Handle selection safely
-        if isinstance(date_range, tuple) and len(date_range) == 2:
-            start_date, end_date = date_range
-        else:
-            start_date = end_date = date_range
-
-    # ---------------------------
-    # APPLY FILTER
-    # ---------------------------
+    # Apply filter
     filtered_df = df[
         (df["Inserted_Date"] >= start_date) &
         (df["Inserted_Date"] <= end_date)
     ]
 
-    # ---------------------------
-    # SHOW SELECTED RANGE (UX)
-    # ---------------------------
-    st.info(f"Showing data from **{start_date} → {end_date}**")
+    # Show selected range
+    st.write(f"📊 Showing data from **{start_date} to {end_date}**")
 
 else:
     filtered_df = df.copy()
-    st.warning("⚠ No valid dates available")# ---------------------------
+    st.warning("⚠ No valid dates available")
 # KPI CARDS
 # ---------------------------
 c1, c2, c3, c4 = st.columns(4)
